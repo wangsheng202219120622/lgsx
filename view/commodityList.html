@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>商品列表</title>
+    <script src="static/jquery/jquery-3.5.1.min.js"></script>
+</head>
+
+<script type="text/javascript">
+    //页码数  | 记录数
+    //从 AJAX获取数据 渲染，并传给render
+    var userQueryBo = {
+        "current":1,
+        "size":5
+    };
+    $(function () {
+        loadList(userQueryBo);
+    });
+    var loadList = function (userQueryBo) {
+        //ajax端获取数据
+        $.ajax({
+            type:"post",
+            async: false,
+            data: JSON.stringify(userQueryBo),
+            url: "/index/Commodity",
+            dataType:"json",
+            contentType:"application/json;charset=UTF-8",
+            success: function(result) {
+                if(result.code==200){
+
+                    userQueryBo.code = null;
+                    userQueryBo.name = null;
+                    renderingData(result.data)
+                }
+            }
+        });
+    };
+    //下单
+    var renderingData = function (page) {
+        var data = page.records;
+        renderingTable(data);
+        renderingPageNum(page);
+        //下单事件
+        $(".placeOrderCls").click(function(){
+            var id = $(this).attr('idval');
+            var quantity = $('#quantity'+id).val();
+            if(quantity<=0){
+                alert("商品数量不足,请选择其他商品")
+            }else{
+                window.location.href="/index/view/placeOrder.html?id="+encodeURIComponent(id);
+            }
+        });
+    }
+    //渲染一个表格和分页导航
+    //Table 表格数据
+    var renderingTable = function (data) {
+        var trs = $('#listId').find('tr');
+        if(trs.length>0){
+            for(var i=1;i<trs.length;i++){
+                $(trs[i]).remove();
+            }
+        }
+        var tr = '';
+        for(var i=0;i<data.length;i++){
+            tr = tr+'<tr>'+
+                 '<td>'+data[i].id+'</td>'+
+                '<td><input type="text" id="code'+data[i].id+'" value="'+data[i].code+'"></td>'+
+                '<td><input type="text" id="name'+data[i].id+'" value="'+data[i].name+'"></td>'+
+                '<td><input type="text" id="price'+data[i].id+'" value="'+(data[i].price/100).toFixed(2)+'"></td>'+
+                '<td><input type="text" id="quantity'+data[i].id+'" value="'+data[i].quantity+'"></td>'+
+                '<td><input type="button" class="placeOrderCls" idval="'+data[i].id+'" value="下单"></tr>';
+
+        }
+        $('#listId').append(tr);
+    }
+    //分页信息
+    var renderingPageNum = function (page) {
+        var pageNum = '<label>共'+page.total+'条</label><input type="button" id="previous" onclick="previousPage()" value="上一页">';
+        for (var i=1;i<=page.totalPages;i++){
+            pageNum = pageNum+'<input type="button" id="pageNumber'+i+'" class="colorRed" onclick="switchPage('+i+')" value="'+i+'">';
+        }
+        pageNum = pageNum+'<input type="button" id="next"  onclick="nextPage()"  value="下一页">';
+        $('#tabPage').text(null);
+        $('#tabPage').append(pageNum);
+        $('#maxPage').val(page.totalPages);
+        $('#pageNumber1').attr({style:"background-color:red"});
+    }
+    //上一页
+    var previousPage = function () {
+        var currentPage = $('#currentPage').val();
+        var current = parseInt(currentPage)-1;
+        if(current>0){
+            userQueryBo.current = current;
+            loadList(userQueryBo);
+            $('#currentPage').val(current);
+            $('.colorRed').removeAttr("style");
+            $('#pageNumber'+current).attr({style:"background-color:red"});
+        }else{
+            alert('已是首页');
+        }
+
+    }
+    //下一页
+    var nextPage = function () {
+        var currentPage = $('#currentPage').val();
+        var current = parseInt(currentPage)+1;
+        var maxPage = $('#maxPage').val();
+        if(current<=maxPage){
+            userQueryBo.current = current;
+            loadList(userQueryBo);
+            $('#currentPage').val(current);
+            // var objs = $('.colorRed');
+            // for(var i=0;i<objs.length;i++){
+            //
+            // }
+            $('.colorRed').removeAttr("style");
+            $('#pageNumber'+current).attr({style:"background-color:red"});
+        }else{
+            alert('已是尾页');
+        }
+    }
+    //切换
+    var switchPage = function (pageNumber) {
+        userQueryBo.current = pageNumber;
+        loadList(userQueryBo);
+        $('#currentPage').val(pageNumber);
+        $('.colorRed').removeAttr("style");
+        $('#pageNumber'+pageNumber).attr({style:"background-color:red"});
+    }
+    // 搜索
+    var queryOk = function () {
+        var codeQuery = $('#codeQuery').val();
+        var nameQuery = $('#nameQuery').val();
+        userQueryBo.code = codeQuery;
+        userQueryBo.name = nameQuery;
+        loadList(userQueryBo);
+    }
+
+
+</script>
+
+<body>
+<input type="hidden" id="currentPage" value="1">
+<input type="hidden" id="maxPage" value="1">
+<!--第一栏-->
+<div>
+    <label>商品编码：<input type="text" id="codeQuery" ></label>
+    <label>商品名称：<input type="text" id="nameQuery" ></label>
+    <input type="button" value="查询" onclick="queryOk()">
+</div>
+<!--商品表-->
+<table id="listId" border="1" >
+    <tr class="center-text">
+        <td>id</td>
+        <td>商品编码</td>
+        <td>商品名称</td>
+        <td>商品价格(元)</td>
+        <td>商品数量</td>
+        <td>操作</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td><input type="text" id="code"></td>
+        <td><input type="text" id="name"></td>
+        <td><input type="text" id="price"></td>
+        <td><input type="text" id="quantity"></td>
+<!--       <td><input type="button" id="newAdd" value="新增" ></td>-->
+    </tr>
+</table>
+<!--第二栏-->
+<div id="tabPage"></div>
+</body>
+
+</html>
